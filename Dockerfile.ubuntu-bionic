@@ -31,12 +31,14 @@ RUN wget https://github.com/nushell/nushell/archive/${VERSION}.tar.gz && \
 RUN cd nushell-${VERSION} && \
     echo "##vso[task.prependpath]/root/.cargo/bin" && \
     rustc -Vv && \
-    cargo build --release && \
+    cargo build --release
+
+RUN cd nushell-${VERSION} && \
     cp README.md debian/README.Debian && \
     rm debian/install && \
     for file in $(find target/release/ -maxdepth 1 -executable -name "nu*"); do echo "$file /usr/bin" >> debian/install; done && \
     rm target/.rustc_info.json target/release/.cargo-lock && \
-    for dirname in deps examples incremental; do rm -rf "target/release/${dirname}"; done && \
+    for dirname in deps examples incremental .fingerprint build; do rm -rf "target/release/${dirname}"; done && \
     EDITOR=/bin/true dpkg-source -q --commit . patch${VERSION}${SUBVERSION} && \
     dpkg-source -i --build . && \
     dpkg-source -i --include-binaries --build . && \

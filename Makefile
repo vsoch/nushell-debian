@@ -6,8 +6,8 @@ URGENCY ?= low
 STABILITY ?= unstable
 
 all:
-	docker build -f "${DOCKERFILE}" --build-arg VERSION="${VERSION}" --build-arg SUBVERSION="${SUBVERSION}" --build-arg "URENCY=${URGENCY}" --build-arg STABILITY="${STABILITY}" -t "${IMAGE}" .
-	docker run -d --rm --name ${IMAGE} "${IMAGE}"
+	docker build -f "${DOCKERFILE}" --build-arg VERSION="${VERSION}" --build-arg SUBVERSION="${SUBVERSION}" --build-arg URGENCY="${URGENCY}" --build-arg STABILITY="${STABILITY}" -t "${IMAGE}" .
+	docker run -d --rm --name "${IMAGE}" "${IMAGE}"
 	docker ps
 	mkdir -p release
 	for filename in nu_${VERSION}-${SUBVERSION}_amd64.deb \
@@ -19,3 +19,4 @@ all:
 			nu_${VERSION}-${SUBVERSION}.debian.tar.xz ; do \
 		docker cp ${IMAGE}:/code/$${filename} release/$${filename} ; \
 	done
+	docker stop "${IMAGE}"
