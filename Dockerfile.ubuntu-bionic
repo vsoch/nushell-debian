@@ -1,0 +1,47 @@
+FROM ubuntu:18.04
+
+# docker build -f Dockerfile.ubuntu-bionic -t ubuntu-bionic .
+
+ENV DEBIAN_FRONTEND noninteractive
+
+RUN apt-get update && apt-get install -y libssl-dev \
+    libxcb-composite0-dev \
+    devscripts \
+    debhelper \
+    pkg-config \
+    wget \
+    curl
+
+ARG VERSION=0.3.0
+ARG SUBVERSION=1
+ARG URGENCY=low
+ARG STABILITY=unstable
+ENV PATH=/root/.cargo/bin:$PATH
+
+WORKDIR /code
+RUN wget https://github.com/nushell/nushell/archive/${VERSION}.tar.gz && \
+    mv ${VERSION}.tar.gz nu_${VERSION}.orig.tar.gz && \
+    tar -xzvf nu_${VERSION}.orig.tar.gz && \
+    # Write first line with correct version
+    # The changelog should already be updated from GitHub
+    cd nushell-${VERSION} && \
+    sed -i "1s/.*/nu (${VERSION}-${SUBVERSION}) ${STABILITY}; urgency=${URGENCY}/" debian/changelog && \
+    curl https://sh.rustup.rs -sSf | sh -s -- -y --no-modify-path --default-toolchain `cat rust-toolchain`
+
+RUN cd nushell-${VERSION} && \
+    echo "##vso[task.prependpath]/root/.cargo/bin" && \
+    rustc -Vv && \
+    cargo build --release
+
+RUN cd nushell-${VERSION} && \
+    cp README.md debian/README.Debian && \
+    rm debian/install && \
+    for file in $(find target/release/ -maxdepth 1 -executable -name "nu*"); do echo "$file /usr/bin" >> debian/install; done && \
+    rm target/.rustc_info.json target/release/.cargo-lock && \
+    for dirname in deps examples incremental .fingerprint build; do rm -rf "target/release/${dirname}"; done && \
+    EDITOR=/bin/true dpkg-source -q --commit . patch${VERSION}${SUBVERSION} && \
+    dpkg-source -i --build . && \
+    dpkg-source -i --include-binaries --build . && \
+    debuild -b -us -uc -i
+
+CMD tail -f /dev/null
